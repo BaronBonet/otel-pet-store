@@ -1,0 +1,16 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/BaronBonet/otel-pet-store/internal/adapters/handler/connect/generated
+  disable:
+    - module: buf.build/googleapis/googleapis
+
+plugins:
+  - local: ["go", "tool", "protoc-gen-go"]
+    out: generated
+    opt: paths=source_relative
+  - local: ["go", "tool", "protoc-gen-connect-go"]
+    out: generated
+    opt: paths=source_relative

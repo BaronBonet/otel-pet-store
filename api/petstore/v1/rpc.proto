@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package petstore.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service PetStoreService {
+  rpc CreatePet(CreatePetRequest) returns (CreatePetResponse);
+  rpc GetPet(GetPetRequest) returns (GetPetResponse);
+  rpc ListPets(ListPetsRequest) returns (ListPetsResponse);
+  rpc UpdatePetStatus(UpdatePetStatusRequest) returns (UpdatePetStatusResponse);
+}
+
+message UpdatePetStatusResponse {
+  petstore.v1.Pet pet = 1;
+}
+
+message CreatePetResponse {
+  petstore.v1.Pet pet = 1;
+}
+
+message GetPetResponse {
+  petstore.v1.Pet pet = 1;
+}
+
+message Pet {
+  string id = 1;
+  string name = 2;
+  PetType type = 3;
+  PetStatus status = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+enum PetType {
+  PET_TYPE_UNSPECIFIED = 0;
+  PET_TYPE_DOG = 1;
+  PET_TYPE_CAT = 2;
+  PET_TYPE_RABBIT = 3;
+}
+
+enum PetStatus {
+  PET_STATUS_UNSPECIFIED = 0;
+  PET_STATUS_AVAILABLE = 1;
+  PET_STATUS_PENDING = 2;
+  PET_STATUS_SOLD = 3;
+}
+
+message CreatePetRequest {
+  string name = 1;
+  PetType type = 2;
+}
+
+message GetPetRequest {
+  string id = 1;
+}
+
+message ListPetsRequest {}
+
+message ListPetsResponse {
+  repeated Pet pets = 1;
+}
+
+message UpdatePetStatusRequest {
+  string id = 1;
+  PetStatus status = 2;
+}

@@ -87,8 +87,6 @@ func NewOtelConfig(config OtelConfig, opts ...Option) (*OtelConfig, error) {
 	return &config, nil
 }
 
-// Taken from https://github.com/newrelic/newrelic-opentelemetry-examples/tree/main/getting-started-guides/go
-
 // SetupOTelSDK bootstraps the OpenTelemetry pipeline.
 // It initializes the resources, propagators, and providers for traces, metrics, and logs.
 // If it does not return an error, make sure to call shutdown for proper cleanup.

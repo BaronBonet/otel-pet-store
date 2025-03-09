@@ -6,12 +6,13 @@ INSERT INTO pets (
 );
 
 -- name: GetPet :one
-SELECT * FROM pets WHERE id = $1;
+SELECT * FROM pets
+WHERE id = $1;
 
 -- name: ListPets :many
 SELECT * FROM pets;
 
 -- name: UpdatePetStatus :exec
-UPDATE pets 
+UPDATE pets
 SET status = $2, updated_at = $3
-WHERE id = $1; 
+WHERE id = $1;

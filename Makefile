@@ -2,7 +2,6 @@
 ## Dependencies
 ################################################################################
 
-# TODO: much of this can be replace with go get -tool introduced in 1.24
 dependencies-install:
 	@./scripts/dependencies/install.sh
 
@@ -13,7 +12,7 @@ dependencies-check:
 ## Code generation
 ################################################################################
 
-generate:
+generate: dependencies-check
 	@find . -type f -name '*_string.go' -exec rm {} +
 	@find . -type d -name 'generated' -exec rm -rf {} +
 	@PATH="$(shell pwd)/local/bin:$$PATH" && go generate ./...

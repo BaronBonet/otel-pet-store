@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/BaronBonet/otel-pet-store/internal/adapters/repository/postgres/generated"
 	"github.com/BaronBonet/otel-pet-store/internal/core"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,13 +23,24 @@ func NewRepository(pool *pgxpool.Pool) core.Repository {
 }
 
 func (r *repository) CreatePet(ctx context.Context, pet *core.Pet) error {
-	err := r.queries.CreatePet(ctx, generated.CreatePetParams{
-		ID:        pet.ID,
+	// Convert string UUID to pgtype.UUID
+	id, err := uuid.Parse(pet.ID)
+	if err != nil {
+		return fmt.Errorf("parsing pet ID: %w", err)
+	}
+	pgUUID := pgtype.UUID{Bytes: id, Valid: true}
+
+	// Convert time.Time to pgtype.Timestamptz
+	createdAt := pgtype.Timestamptz{Time: pet.CreatedAt, Valid: true}
+	updatedAt := pgtype.Timestamptz{Time: pet.UpdatedAt, Valid: true}
+
+	err = r.queries.CreatePet(ctx, generated.CreatePetParams{
+		ID:        pgUUID,
 		Name:      pet.Name,
-		Type:      generated.PetType(pet.Type),
-		Status:    generated.PetStatus(pet.Status),
-		CreatedAt: pet.CreatedAt,
-		UpdatedAt: pet.UpdatedAt,
+		Type:      string(pet.Type),
+		Status:    string(pet.Status),
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	})
 	if err != nil {
 		return fmt.Errorf("creating pet in database: %w", err)
@@ -35,17 +49,25 @@ func (r *repository) CreatePet(ctx context.Context, pet *core.Pet) error {
 }
 
 func (r *repository) GetPet(ctx context.Context, id string) (*core.Pet, error) {
-	pet, err := r.queries.GetPet(ctx, id)
+	// Convert string UUID to pgtype.UUID
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("parsing pet ID: %w", err)
+	}
+	pgUUID := pgtype.UUID{Bytes: uid, Valid: true}
+
+	pet, err := r.queries.GetPet(ctx, pgUUID)
 	if err != nil {
 		return nil, fmt.Errorf("getting pet from database: %w", err)
 	}
+
 	return &core.Pet{
-		ID:        pet.ID,
+		ID:        uuid.UUID(pet.ID.Bytes).String(),
 		Name:      pet.Name,
 		Type:      core.PetType(pet.Type),
 		Status:    core.PetStatus(pet.Status),
-		CreatedAt: pet.CreatedAt,
-		UpdatedAt: pet.UpdatedAt,
+		CreatedAt: pet.CreatedAt.Time,
+		UpdatedAt: pet.UpdatedAt.Time,
 	}, nil
 }
 
@@ -57,22 +79,32 @@ func (r *repository) ListPets(ctx context.Context) ([]*core.Pet, error) {
 	result := make([]*core.Pet, len(pets))
 	for i, pet := range pets {
 		result[i] = &core.Pet{
-			ID:        pet.ID,
+			ID:        uuid.UUID(pet.ID.Bytes).String(),
 			Name:      pet.Name,
 			Type:      core.PetType(pet.Type),
 			Status:    core.PetStatus(pet.Status),
-			CreatedAt: pet.CreatedAt,
-			UpdatedAt: pet.UpdatedAt,
+			CreatedAt: pet.CreatedAt.Time,
+			UpdatedAt: pet.UpdatedAt.Time,
 		}
 	}
 	return result, nil
 }
 
 func (r *repository) UpdatePetStatus(ctx context.Context, id string, status core.PetStatus) error {
-	err := r.queries.UpdatePetStatus(ctx, generated.UpdatePetStatusParams{
-		ID:        id,
-		Status:    generated.PetStatus(status),
-		UpdatedAt: time.Now(),
+	// Convert string UUID to pgtype.UUID
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return fmt.Errorf("parsing pet ID: %w", err)
+	}
+	pgUUID := pgtype.UUID{Bytes: uid, Valid: true}
+
+	// Convert time.Time to pgtype.Timestamptz
+	updatedAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+
+	err = r.queries.UpdatePetStatus(ctx, generated.UpdatePetStatusParams{
+		ID:        pgUUID,
+		Status:    string(status),
+		UpdatedAt: updatedAt,
 	})
 	if err != nil {
 		return fmt.Errorf("updating pet status in database: %w", err)

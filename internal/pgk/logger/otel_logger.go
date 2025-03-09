@@ -7,8 +7,6 @@ import (
 	"os"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
-	"go.opentelemetry.io/otel/attribute"
-	otellog "go.opentelemetry.io/otel/log"
 )
 
 type combinedLogger struct {
@@ -48,26 +46,4 @@ func (l *combinedLogger) Error(ctx context.Context, msg string, keysAndValues ..
 func (l *combinedLogger) Fatal(ctx context.Context, msg string, keysAndValues ...interface{}) {
 	l.otelLogger.ErrorContext(ctx, msg, keysAndValues...)
 	os.Exit(1)
-}
-
-func TestLogExport(ctx context.Context) {
-	// Get the global logger provider
-	loggerProvider := otellog.GetLoggerProvider()
-
-	// Create a logger from the provider
-	logger := loggerProvider.Logger(
-		"test.logger",
-		otellog.WithInstrumentationVersion("v0.1.0"),
-	)
-
-	// Log a message with attributes
-	logger.Info(
-		"This is a test log message to verify OTLP export",
-		otellog.WithAttributes(
-			attribute.String("test.attribute", "test-value"),
-			attribute.Int("test.number", 42),
-		),
-	)
-
-	fmt.Println("Test log message sent to exporter")
 }

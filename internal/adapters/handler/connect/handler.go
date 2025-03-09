@@ -11,8 +11,12 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpchealth"
 	"connectrpc.com/otelconnect"
+	v1 "github.com/BaronBonet/otel-pet-store/internal/adapters/handler/connect/generated/petstore/v1"
 	"github.com/BaronBonet/otel-pet-store/internal/core"
-	"github.com/docker/docker/daemon/logger"
+	"github.com/BaronBonet/otel-pet-store/internal/pgk/logger"
+
+	"github.com/BaronBonet/otel-pet-store/internal/adapters/handler/connect/generated/petstore/v1/petstorev1connect"
+
 	"go.opentelemetry.io/otel"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -20,9 +24,6 @@ import (
 	"golang.org/x/net/http2/h2c"
 )
 
-// fieldalignment is not possible here due to the underlying libraries
-//
-//nolint:govet
 type Server struct {
 	cfg     Config
 	handler http.Handler
@@ -37,6 +38,7 @@ func New(
 	ctx context.Context,
 	cfg Config,
 	service core.Service,
+	logger logger.Logger,
 ) (*Server, error) {
 	otelInterceptor, err := otelconnect.NewInterceptor(
 		otelconnect.WithTrustRemote(),
@@ -55,10 +57,10 @@ func New(
 		return nil, fmt.Errorf("creating otel interceptor: %w", err)
 	}
 
-	// path, handler := fws_facadev1connect.NewFwsFacadeServiceHandler(
-	// 	server,
-	// 	connect.WithInterceptors(otelInterceptor),
-	// )
+	path, handler := petstorev1connect.NewPetStoreServiceHandler(
+		server,
+		connect.WithInterceptors(otelInterceptor),
+	)
 	logger.Info(ctx, fmt.Sprintf("Connect Handler created at: %s", path))
 	server.path = path
 	server.handler = handler
@@ -118,69 +120,60 @@ func (s *Server) GracefulStop(ctx context.Context) {
 	s.logger.Info(ctx, "server shutdown complete")
 }
 
-type petstoreHandler struct {
-	pb.UnimplementedPetStoreServiceHandler
-	service core.Service
-}
-
-func NewPetStoreHandler(service core.Service) pb.PetStoreServiceHandler {
-	return &petstoreHandler{service: service}
-}
-
-func (h *petstoreHandler) CreatePet(
+func (s *Server) CreatePet(
 	ctx context.Context,
-	req *connect.Request[pb.CreatePetRequest],
-) (*connect.Response[pb.Pet], error) {
-	pet, err := h.service.CreatePet(ctx, req.Msg.Name, core.PetType(req.Msg.Type.String()))
+	req *connect.Request[v1.CreatePetRequest],
+) (*connect.Response[v1.CreatePetResponse], error) {
+	pet, err := s.service.CreatePet(ctx, req.Msg.Name, core.PetType(req.Msg.Type.String()))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(toPbPet(pet)), nil
+	return connect.NewResponse(&v1.CreatePetResponse{Pet: toPbPet(pet)}), nil
 }
 
-func (h *petstoreHandler) GetPet(
+func (s *Server) GetPet(
 	ctx context.Context,
-	req *connect.Request[pb.GetPetRequest],
-) (*connect.Response[pb.Pet], error) {
-	pet, err := h.service.GetPet(ctx, req.Msg.Id)
+	req *connect.Request[v1.GetPetRequest],
+) (*connect.Response[v1.GetPetResponse], error) {
+	pet, err := s.service.GetPet(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-	return connect.NewResponse(toPbPet(pet)), nil
+	return connect.NewResponse(&v1.GetPetResponse{Pet: toPbPet(pet)}), nil
 }
 
-func (h *petstoreHandler) ListPets(
+func (s *Server) ListPets(
 	ctx context.Context,
-	_ *connect.Request[pb.ListPetsRequest],
-) (*connect.Response[pb.ListPetsResponse], error) {
-	pets, err := h.service.ListPets(ctx)
+	_ *connect.Request[v1.ListPetsRequest],
+) (*connect.Response[v1.ListPetsResponse], error) {
+	pets, err := s.service.ListPets(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	pbPets := make([]*pb.Pet, len(pets))
+	pbPets := make([]*v1.Pet, len(pets))
 	for i, pet := range pets {
 		pbPets[i] = toPbPet(pet)
 	}
-	return connect.NewResponse(&pb.ListPetsResponse{Pets: pbPets}), nil
+	return connect.NewResponse(&v1.ListPetsResponse{Pets: pbPets}), nil
 }
 
-func (h *petstoreHandler) UpdatePetStatus(
+func (s *Server) UpdatePetStatus(
 	ctx context.Context,
-	req *connect.Request[pb.UpdatePetStatusRequest],
-) (*connect.Response[pb.Pet], error) {
-	pet, err := h.service.UpdatePetStatus(ctx, req.Msg.Id, core.PetStatus(req.Msg.Status.String()))
+	req *connect.Request[v1.UpdatePetStatusRequest],
+) (*connect.Response[v1.UpdatePetStatusResponse], error) {
+	pet, err := s.service.UpdatePetStatus(ctx, req.Msg.Id, core.PetStatus(req.Msg.Status.String()))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(toPbPet(pet)), nil
+	return connect.NewResponse(&v1.UpdatePetStatusResponse{Pet: toPbPet(pet)}), nil
 }
 
-func toPbPet(pet *core.Pet) *pb.Pet {
-	return &pb.Pet{
+func toPbPet(pet *core.Pet) *v1.Pet {
+	return &v1.Pet{
 		Id:        pet.ID,
 		Name:      pet.Name,
-		Type:      pb.PetType(pb.PetType_value[string(pet.Type)]),
-		Status:    pb.PetStatus(pb.PetStatus_value[string(pet.Status)]),
+		Type:      v1.PetType(v1.PetType_value[string(pet.Type)]),
+		Status:    v1.PetStatus(v1.PetStatus_value[string(pet.Status)]),
 		CreatedAt: timestamppb.New(pet.CreatedAt),
 		UpdatedAt: timestamppb.New(pet.UpdatedAt),
 	}

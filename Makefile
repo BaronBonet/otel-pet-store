@@ -50,4 +50,20 @@ test-health:
 		--data '{"service":"petstore.v1.PetStoreService"}' \
 		http://localhost:8080/grpc.health.v1.Health/Check
 
+test-list-pets:
+	@echo "Listing all pets:"
+	@grpcurl \
+		-proto api/petstore/v1/rpc.proto \
+		-import-path api \
+		-plaintext \
+		localhost:8080 \
+		petstore.v1.PetStoreService/ListPets
+
+################################################################################
+## Data Management
+################################################################################
+
+seed-pets:
+	@echo "Seeding sample pets into the database..."
+	@./scripts/seed_pets.sh
 

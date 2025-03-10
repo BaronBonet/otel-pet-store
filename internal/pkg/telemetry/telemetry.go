@@ -119,6 +119,7 @@ func SetupOTelSDK(
 	// Set up a propagator for context propagation across service boundaries.
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
+
 	// Initialize the trace provider with the configured exporter and resource.
 	tracerProvider, err := newTraceProvider(ctx, res, config)
 	if err != nil {
@@ -127,6 +128,7 @@ func SetupOTelSDK(
 	}
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
+
 	// Initialize the meter provider for metrics with the configured exporter and resource.
 	meterProvider, err := newMeterProvider(ctx, res, config)
 	if err != nil {
@@ -134,22 +136,16 @@ func SetupOTelSDK(
 		return
 	}
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	if config.Exporter.Exporter == ExporterNewRelic {
-		otel.SetMeterProvider(meterProvider)
-		// Start runtime instrumentation to collect runtime metrics.
-		if err := runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
-			handleErr(err)
-			return shutdown, err
-		}
-		// Initialize the logger provider for logs with the configured exporter and resource.
-		loggerProvider, err := newLoggerProvider(ctx, res, config)
-		if err != nil {
-			handleErr(err)
-			return shutdown, err
-		}
-		shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
-		global.SetLoggerProvider(loggerProvider)
+	otel.SetMeterProvider(meterProvider)
+
+	// Initialize the logger provider for logs with the configured exporter and resource.
+	loggerProvider, err := newLoggerProvider(ctx, res, config)
+	if err != nil {
+		handleErr(err)
+		return shutdown, err
 	}
+	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+	global.SetLoggerProvider(loggerProvider)
 
 	return
 }
@@ -213,26 +209,41 @@ func newMeterProvider(
 	res *resource.Resource,
 	config OtelConfig,
 ) (*metric.MeterProvider, error) {
-	metricExporter, err := otlpmetrichttp.New(
-		ctx,
+	opts := []otlpmetrichttp.Option{
 		otlpmetrichttp.WithEndpoint(config.Exporter.endpoint),
 		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-		otlpmetrichttp.WithHeaders(map[string]string{
+	}
+
+	if config.Exporter.apiKey != "" {
+		opts = append(opts, otlpmetrichttp.WithHeaders(map[string]string{
 			"api-key": config.Exporter.apiKey,
-		}),
-	)
+		}))
+	}
+
+	if config.Exporter.Exporter == ExporterOTLPLocal {
+		opts = append(opts, otlpmetrichttp.WithInsecure())
+	}
+
+	metricExporter, err := otlpmetrichttp.New(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
+
 	meterProvider := metric.NewMeterProvider(
 		metric.WithReader(
 			metric.NewPeriodicReader(
 				metricExporter,
-				metric.WithInterval(3*time.Second),
+				metric.WithInterval(10*time.Second),
 			),
 		),
 		metric.WithResource(res),
 	)
+
+	// Start runtime instrumentation
+	if err := runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
+		return nil, fmt.Errorf("failed to start runtime instrumentation: %w", err)
+	}
+
 	return meterProvider, nil
 }
 

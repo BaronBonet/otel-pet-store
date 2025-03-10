@@ -28,6 +28,8 @@ func main() {
 		telemetry.OtelConfig{
 			Service: telemetry.OtelConfigService{
 				Name: name,
+				Version: infrastructure.Version,
+				NameSpace: "petstore",
 			},
 			Exporter: telemetry.OtelConfigExporter{
 				Exporter: telemetry.ExporterOTLPLocal,

@@ -11,6 +11,12 @@ processors:
     timeout: 1s
     send_batch_size: 1024
 
+  resource:
+    attributes:
+      - key: service.name
+        action: insert
+        value: "pet-store"
+
 exporters:
   debug:
     verbosity: detailed
@@ -38,5 +44,5 @@ service:
       exporters: [otlp]
     logs:
       receivers: [otlp]
-      processors: [batch]
+      processors: [batch, resource]
       exporters: [debug, loki]

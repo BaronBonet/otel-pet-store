@@ -250,10 +250,12 @@ func newLoggerProvider(
 		return nil, err
 	}
 
+	// Create a processor pipeline for log exporting
 	processor := log.NewBatchProcessor(
 		logExporter,
 	)
 
+	// Create the logger provider with trace context, ensuring logs are correlated with traces
 	loggerProvider := log.NewLoggerProvider(
 		log.WithProcessor(processor),
 		log.WithResource(res),

@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/BaronBonet/otel-pet-store/internal/adapters/handler/connect"
+	"github.com/BaronBonet/otel-pet-store/internal/adapters/repository/postgres"
 	"github.com/BaronBonet/otel-pet-store/internal/core"
 	"github.com/BaronBonet/otel-pet-store/internal/infrastructure"
-	"github.com/BaronBonet/otel-pet-store/internal/pgk/logger"
-	"github.com/BaronBonet/otel-pet-store/internal/pgk/telemetry"
+	"github.com/BaronBonet/otel-pet-store/internal/pkg/logger"
+	"github.com/BaronBonet/otel-pet-store/internal/pkg/telemetry"
 )
 
 const (
@@ -44,7 +46,8 @@ func main() {
 		panic(fmt.Sprintf("Could not set up OpenTelemetry SDK %v", err))
 	}
 
-	logger := logger.NewOTelLogger(name, infrastructure.Version)
+	// logger := logger.NewOTelLogger(name, infrastructure.Version)
+	logger := logger.NewSlogLogger(slog.LevelDebug)
 
 	defer func() {
 		logger.Info(ctx, "Shutting down Otel")
@@ -57,11 +60,11 @@ func main() {
 	if err != nil {
 		logger.Fatal(ctx, "Couldn't create pool", "error", err)
 	}
-	repo := postgres.New(pool, logger)
+	repo := postgres.New(pool)
 
 	service := core.NewService(repo)
 
-	handler, err := connect.New(ctx, logger, cfg.Handler, service)
+	handler, err := connect.New(ctx, cfg.Handler, service, logger)
 	if err != nil {
 		logger.Fatal(ctx, "Could not create handler", "error", err)
 	}

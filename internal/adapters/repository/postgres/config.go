@@ -6,7 +6,7 @@ type PoolConfig struct {
 }
 
 type Config struct {
-	DatabaseURL string `env:"DATABASE_URL,notEmpty"`
-	Timezone    string `env:"DATABASE_TIMEZONE"     envDefault:"UTC"`
+	DatabaseURL string `env:"DATABASE_URL"`
+	Timezone    string `env:"DATABASE_TIMEZONE" envDefault:"UTC"`
 	PoolConfig  PoolConfig
 }

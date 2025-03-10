@@ -16,21 +16,19 @@ type repository struct {
 	queries *generated.Queries
 }
 
-func NewRepository(pool *pgxpool.Pool) core.Repository {
+func New(pool *pgxpool.Pool) core.Repository {
 	return &repository{
 		queries: generated.New(pool),
 	}
 }
 
 func (r *repository) CreatePet(ctx context.Context, pet *core.Pet) error {
-	// Convert string UUID to pgtype.UUID
 	id, err := uuid.Parse(pet.ID)
 	if err != nil {
 		return fmt.Errorf("parsing pet ID: %w", err)
 	}
 	pgUUID := pgtype.UUID{Bytes: id, Valid: true}
 
-	// Convert time.Time to pgtype.Timestamptz
 	createdAt := pgtype.Timestamptz{Time: pet.CreatedAt, Valid: true}
 	updatedAt := pgtype.Timestamptz{Time: pet.UpdatedAt, Valid: true}
 
@@ -49,7 +47,6 @@ func (r *repository) CreatePet(ctx context.Context, pet *core.Pet) error {
 }
 
 func (r *repository) GetPet(ctx context.Context, id string) (*core.Pet, error) {
-	// Convert string UUID to pgtype.UUID
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, fmt.Errorf("parsing pet ID: %w", err)
@@ -91,14 +88,12 @@ func (r *repository) ListPets(ctx context.Context) ([]*core.Pet, error) {
 }
 
 func (r *repository) UpdatePetStatus(ctx context.Context, id string, status core.PetStatus) error {
-	// Convert string UUID to pgtype.UUID
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return fmt.Errorf("parsing pet ID: %w", err)
 	}
 	pgUUID := pgtype.UUID{Bytes: uid, Valid: true}
 
-	// Convert time.Time to pgtype.Timestamptz
 	updatedAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 
 	err = r.queries.UpdatePetStatus(ctx, generated.UpdatePetStatusParams{

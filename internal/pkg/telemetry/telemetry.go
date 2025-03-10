@@ -66,17 +66,7 @@ func NewOtelConfig(config OtelConfig, opts ...Option) (*OtelConfig, error) {
 		}
 	}
 
-	switch config.Exporter.Exporter {
-	case ExporterOTLPLocal:
-		config.Exporter.endpoint = "localhost:4318"
-	case ExporterNewRelic:
-		config.Exporter.endpoint = "otlp.nr-data.net"
-		if config.Exporter.apiKey == "" {
-			return nil, errors.New("API key is required for New Relic exporter")
-		}
-	case ExporterUnknown:
-		return nil, errors.New("unknown exporter")
-	}
+	config.Exporter.endpoint = "localhost:4318"
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -160,13 +150,6 @@ func SetupOTelSDK(
 		shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
 		global.SetLoggerProvider(loggerProvider)
 	}
-
-	fmt.Println("OpenTelemetry SDK setup complete")
-	fmt.Printf("Service: %s/%s (version: %s)\n",
-		config.Service.NameSpace,
-		config.Service.Name,
-		config.Service.Version)
-	fmt.Printf("Exporter: %s\n", config.Exporter.Exporter)
 
 	return
 }

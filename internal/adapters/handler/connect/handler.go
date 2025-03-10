@@ -13,7 +13,7 @@ import (
 	"connectrpc.com/otelconnect"
 	v1 "github.com/BaronBonet/otel-pet-store/internal/adapters/handler/connect/generated/petstore/v1"
 	"github.com/BaronBonet/otel-pet-store/internal/core"
-	"github.com/BaronBonet/otel-pet-store/internal/pgk/logger"
+	"github.com/BaronBonet/otel-pet-store/internal/pkg/logger"
 
 	"github.com/BaronBonet/otel-pet-store/internal/adapters/handler/connect/generated/petstore/v1/petstorev1connect"
 
@@ -75,9 +75,11 @@ func (s *Server) Serve(ctx context.Context) {
 	s.logger.Info(ctx, "server listening at "+addr)
 
 	mux := http.NewServeMux()
+
+	// Handle gRPC endpoints
 	mux.Handle(s.path, s.handler)
 	checker := grpchealth.NewStaticChecker(
-		"pet_store.v1.PetStoreService",
+		"petstore.v1.PetStoreService",
 	)
 	mux.Handle(grpchealth.NewHandler(checker, connect.WithInterceptors(s.otel)))
 

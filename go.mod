@@ -10,6 +10,7 @@ require (
 	github.com/exaring/otelpgx v0.9.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
+	github.com/lmittmann/tint v1.0.7
 	go.opentelemetry.io/collector/service v0.121.0
 	go.opentelemetry.io/contrib/bridges/otelslog v0.10.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.60.0

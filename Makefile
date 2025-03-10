@@ -33,3 +33,21 @@ lint:
 	@CGO_ENABLED=1 golangci-lint run
 	@sqlfluff lint --config .sqlfluff
 
+################################################################################
+## Run Server
+################################################################################
+
+run-http:
+	@go run cmd/http/main.go
+
+################################################################################
+## Test Endpoints
+################################################################################
+
+test-health:
+	@curl \
+		--header "Content-Type: application/json" \
+		--data '{"service":"petstore.v1.PetStoreService"}' \
+		http://localhost:8080/grpc.health.v1.Health/Check
+
+

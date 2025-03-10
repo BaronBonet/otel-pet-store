@@ -16,7 +16,7 @@ type ApplicationConfig struct {
 func LoadConfig() (*ApplicationConfig, error) {
 	config := ApplicationConfig{}
 	opts := env.Options{
-		RequiredIfNoDef: true,
+		RequiredIfNoDef: false,
 	}
 	if err := env.ParseWithOptions(&config, opts); err != nil {
 		return nil, err

@@ -90,12 +90,6 @@ func (s *Server) Serve(ctx context.Context) {
 			MaxReadFrameSize:     1 << 20, // 1MB
 			IdleTimeout:          s.cfg.IdleTimeout,
 		}),
-		// TODO: do we need to set timeouts here?
-		// ReadTimeout:       30 * time.Second,
-		// WriteTimeout:      30 * time.Second,
-		// IdleTimeout:       120 * time.Second,
-		// ReadHeaderTimeout: 10 * time.Second,
-		// MaxHeaderBytes:    1 << 20, // 1MB
 	}
 	s.server.SetKeepAlivesEnabled(true)
 

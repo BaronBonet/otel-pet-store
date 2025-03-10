@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/BaronBonet/otel-pet-store/internal/adapters/handler/connect"
 	"github.com/BaronBonet/otel-pet-store/internal/adapters/repository/postgres"
@@ -27,8 +26,8 @@ func main() {
 	otelConfig, err := telemetry.NewOtelConfig(
 		telemetry.OtelConfig{
 			Service: telemetry.OtelConfigService{
-				Name: name,
-				Version: infrastructure.Version,
+				Name:      name,
+				Version:   infrastructure.Version,
 				NameSpace: "petstore",
 			},
 			Exporter: telemetry.OtelConfigExporter{
@@ -48,8 +47,7 @@ func main() {
 		panic(fmt.Sprintf("Could not set up OpenTelemetry SDK %v", err))
 	}
 
-	// logger := logger.NewOTelLogger(name, infrastructure.Version)
-	logger := logger.NewSlogLogger(slog.LevelDebug)
+	logger := logger.NewOTelLogger(name, infrastructure.Version)
 
 	defer func() {
 		logger.Info(ctx, "Shutting down Otel")
@@ -64,7 +62,7 @@ func main() {
 	}
 	repo := postgres.New(pool)
 
-	service := core.NewService(repo)
+	service := core.NewService(repo, logger)
 
 	handler, err := connect.New(ctx, cfg.Handler, service, logger)
 	if err != nil {

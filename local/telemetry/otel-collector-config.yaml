@@ -12,18 +12,16 @@ processors:
     send_batch_size: 1024
 
 exporters:
-  loki:
-    endpoint: http://loki:3100/loki/api/v1/push
-    tls:
-      insecure: true
+  debug:
+    verbosity: detailed
 
-  otlp:
+  # otlp/loki:
+  #   endpoint: http://loki:3100/otlp
+  #   tls:
+  #     insecure: true
+
+  otlp/tempo:
     endpoint: tempo:4317
-    tls:
-      insecure: true
-
-  prometheusremotewrite:
-    endpoint: "http://prometheus:9090/api/v1/write"
     tls:
       insecure: true
 
@@ -32,8 +30,8 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [otlp/tempo]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [loki]
+      exporters: [debug]

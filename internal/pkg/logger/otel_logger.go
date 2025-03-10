@@ -2,7 +2,6 @@ package logger
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -16,7 +15,6 @@ type combinedLogger struct {
 func NewOTelLogger(serviceName, version string) Logger {
 	otelLogger := otelslog.NewLogger(serviceName,
 		otelslog.WithVersion(version),
-		// TODO: does this work or just show the location of this file?
 		otelslog.WithSource(true),
 	)
 
@@ -26,12 +24,10 @@ func NewOTelLogger(serviceName, version string) Logger {
 }
 
 func (l *combinedLogger) Debug(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	fmt.Printf("combinedLogger.Debug: %s", msg)
 	l.otelLogger.DebugContext(ctx, msg, keysAndValues...)
 }
 
 func (l *combinedLogger) Info(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	fmt.Printf("combinedLogger.info: %s", msg)
 	l.otelLogger.InfoContext(ctx, msg, keysAndValues...)
 }
 

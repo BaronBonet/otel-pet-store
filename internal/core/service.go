@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/BaronBonet/otel-pet-store/internal/pkg/logger"
 	"github.com/google/uuid"
 )
 
 type service struct {
-	repo Repository
+	repo   Repository
+	logger logger.Logger
 }
 
-func NewService(repo Repository) Service {
-	return &service{repo: repo}
+func NewService(repo Repository, logger logger.Logger) Service {
+	return &service{repo: repo, logger: logger}
 }
 
 func (s *service) CreatePet(ctx context.Context, name string, petType PetType) (*Pet, error) {
+	s.logger.Info(ctx, "Creating pet", "name", name, "type", petType)
 	pet := &Pet{
 		ID:        uuid.New().String(),
 		Name:      name,
@@ -34,14 +37,17 @@ func (s *service) CreatePet(ctx context.Context, name string, petType PetType) (
 }
 
 func (s *service) GetPet(ctx context.Context, id string) (*Pet, error) {
+	s.logger.Info(ctx, "Getting pet", "id", id)
 	return s.repo.GetPet(ctx, id)
 }
 
 func (s *service) ListPets(ctx context.Context) ([]*Pet, error) {
+	s.logger.Info(ctx, "Listing pets")
 	return s.repo.ListPets(ctx)
 }
 
 func (s *service) UpdatePetStatus(ctx context.Context, id string, status PetStatus) (*Pet, error) {
+	s.logger.Info(ctx, "Updating pet status", "id", id, "status", status)
 	if err := s.repo.UpdatePetStatus(ctx, id, status); err != nil {
 		return nil, fmt.Errorf("updating pet status: %w", err)
 	}

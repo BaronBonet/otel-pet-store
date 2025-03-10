@@ -7,15 +7,12 @@ import (
 	"os"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -36,7 +33,6 @@ type OtelConfigService struct {
 	instanceId string
 }
 type OtelConfigExporter struct {
-	apiKey   string
 	endpoint string
 	Exporter Exporter
 }
@@ -45,28 +41,9 @@ type OtelConfig struct {
 	Exporter OtelConfigExporter
 }
 
-// Option applies an option to the configuration.
-type Option func(config *OtelConfig) error
-
-func WithAPIKey(key string) Option {
-	return func(config *OtelConfig) error {
-		if key == "" {
-			return errors.New("API key cannot be empty")
-		}
-		config.Exporter.apiKey = key
-		return nil
-	}
-}
-
 // NewOtelConfig creates a new configuration with the provided options.
-func NewOtelConfig(config OtelConfig, opts ...Option) (*OtelConfig, error) {
-	for _, opt := range opts {
-		if err := opt(&config); err != nil {
-			return nil, err
-		}
-	}
-
-	config.Exporter.endpoint = "localhost:4318"
+func NewOtelConfig(config OtelConfig) (*OtelConfig, error) {
+	config.Exporter.endpoint = "localhost:4317"
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -130,13 +107,13 @@ func SetupOTelSDK(
 	otel.SetTracerProvider(tracerProvider)
 
 	// Initialize the meter provider for metrics with the configured exporter and resource.
-	meterProvider, err := newMeterProvider(ctx, res, config)
-	if err != nil {
-		handleErr(err)
-		return
-	}
-	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	otel.SetMeterProvider(meterProvider)
+	// meterProvider, err := newMeterProvider(ctx, res, config)
+	// if err != nil {
+	// 	handleErr(err)
+	// 	return
+	// }
+	// shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+	// otel.SetMeterProvider(meterProvider)
 
 	// Initialize the logger provider for logs with the configured exporter and resource.
 	loggerProvider, err := newLoggerProvider(ctx, res, config)
@@ -167,18 +144,15 @@ func newTraceProvider(
 	res *resource.Resource,
 	config OtelConfig,
 ) (*trace.TracerProvider, error) {
-	headers := map[string]string{"api-key": config.Exporter.apiKey}
-
-	opts := []otlptracehttp.Option{
-		otlptracehttp.WithEndpoint(config.Exporter.endpoint),
-		otlptracehttp.WithHeaders(headers),
+	opts := []otlptracegrpc.Option{
+		otlptracegrpc.WithEndpoint(config.Exporter.endpoint),
 	}
 
 	if config.Exporter.Exporter == ExporterOTLPLocal {
-		opts = append(opts, otlptracehttp.WithInsecure())
+		opts = append(opts, otlptracegrpc.WithInsecure())
 	}
 
-	traceExporter, err := otlptracehttp.New(
+	traceExporter, err := otlptracegrpc.New(
 		ctx,
 		opts...,
 	)
@@ -204,92 +178,80 @@ func newTraceProvider(
 
 // newMeterProvider initializes a meter provider for metrics collection.
 // It uses a periodic reader to export metrics at regular intervals.
-func newMeterProvider(
-	ctx context.Context,
-	res *resource.Resource,
-	config OtelConfig,
-) (*metric.MeterProvider, error) {
-	opts := []otlpmetrichttp.Option{
-		otlpmetrichttp.WithEndpoint(config.Exporter.endpoint),
-		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-	}
-
-	if config.Exporter.apiKey != "" {
-		opts = append(opts, otlpmetrichttp.WithHeaders(map[string]string{
-			"api-key": config.Exporter.apiKey,
-		}))
-	}
-
-	if config.Exporter.Exporter == ExporterOTLPLocal {
-		opts = append(opts, otlpmetrichttp.WithInsecure())
-	}
-
-	metricExporter, err := otlpmetrichttp.New(ctx, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(
-			metric.NewPeriodicReader(
-				metricExporter,
-				metric.WithInterval(10*time.Second),
-			),
-		),
-		metric.WithResource(res),
-	)
-
-	// Start runtime instrumentation
-	if err := runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
-		return nil, fmt.Errorf("failed to start runtime instrumentation: %w", err)
-	}
-
-	return meterProvider, nil
-}
+// func newMeterProvider(
+// 	ctx context.Context,
+// 	res *resource.Resource,
+// 	config OtelConfig,
+// ) (*metric.MeterProvider, error) {
+// 	opts := []otlpmetrichttp.Option{
+// 		otlpmetrichttp.WithEndpoint(config.Exporter.endpoint),
+// 		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+// 	}
+//
+// 	if config.Exporter.apiKey != "" {
+// 		opts = append(opts, otlpmetrichttp.WithHeaders(map[string]string{
+// 			"api-key": config.Exporter.apiKey,
+// 		}))
+// 	}
+//
+// 	if config.Exporter.Exporter == ExporterOTLPLocal {
+// 		opts = append(opts, otlpmetrichttp.WithInsecure())
+// 	}
+//
+// 	metricExporter, err := otlpmetrichttp.New(ctx, opts...)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	meterProvider := metric.NewMeterProvider(
+// 		metric.WithReader(
+// 			metric.NewPeriodicReader(
+// 				metricExporter,
+// 				metric.WithInterval(10*time.Second),
+// 			),
+// 		),
+// 		metric.WithResource(res),
+// 	)
+//
+// 	// Start runtime instrumentation
+// 	if err := runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
+// 		return nil, fmt.Errorf("failed to start runtime instrumentation: %w", err)
+// 	}
+//
+// 	return meterProvider, nil
+// }
 
 func newLoggerProvider(
 	ctx context.Context,
 	res *resource.Resource,
 	config OtelConfig,
 ) (*log.LoggerProvider, error) {
-	// Print debug information about where logs are being sent
 	fmt.Printf("Setting up log exporter to endpoint: %s\n", config.Exporter.endpoint)
 
-	opts := []otlploghttp.Option{
-		otlploghttp.WithEndpoint(config.Exporter.endpoint),
-		otlploghttp.WithCompression(otlploghttp.GzipCompression),
-	}
-
-	// Only add API key if it's not empty
-	if config.Exporter.apiKey != "" {
-		opts = append(opts, otlploghttp.WithHeaders(map[string]string{
-			"api-key": config.Exporter.apiKey,
-		}))
+	opts := []otlploggrpc.Option{
+		otlploggrpc.WithEndpoint(config.Exporter.endpoint),
+		otlploggrpc.WithCompressor("gzip"),
 	}
 
 	if config.Exporter.Exporter == ExporterOTLPLocal {
-		opts = append(opts, otlploghttp.WithInsecure())
+		opts = append(opts, otlploggrpc.WithInsecure())
 		fmt.Println("Using insecure connection for logs")
 	}
 
-	// Add debug option to see what's happening with the exporter
-	opts = append(opts, otlploghttp.WithRetry(otlploghttp.RetryConfig{
+	opts = append(opts, otlploggrpc.WithRetry(otlploggrpc.RetryConfig{
 		Enabled:         true,
 		InitialInterval: 1 * time.Second,
 		MaxInterval:     5 * time.Second,
-		MaxElapsedTime:  30 * time.Second,
 	}))
 
-	logExporter, err := otlploghttp.New(ctx, opts...)
+	logExporter, err := otlploggrpc.New(ctx, opts...)
 	if err != nil {
 		fmt.Printf("ERROR creating log exporter: %v\n", err)
 		return nil, err
 	}
 
-	// Create a custom processor that logs when batches are exported
 	processor := log.NewBatchProcessor(
 		logExporter,
-		// Add options to make batches flush more frequently during debugging
 	)
 
 	loggerProvider := log.NewLoggerProvider(

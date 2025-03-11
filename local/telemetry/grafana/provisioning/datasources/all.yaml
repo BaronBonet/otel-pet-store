@@ -24,12 +24,12 @@ datasources:
     editable: false
     apiVersion: 1
     uid: loki
-    # TODO: it seems like this isn't being used
+    # TODO: why is the traceid not appearing in TraceQL when i click on the "View Trace" button in loki?
     jsonData:
       derivedFields:
         - datasourceUid: tempo
           matcherRegex: '"traceid":"([a-f0-9]+)"'
-          matherType: label
+          # matcherType: "label"
           name: Trace ID
-          urlDisplayLabel: "View Trace"
-          url: ${__value.raw}
+          urlDisplayLabel: "Trace"
+          url: "$${__value.raw}"

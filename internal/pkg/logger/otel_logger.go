@@ -15,6 +15,7 @@ type combinedLogger struct {
 func NewOTelLogger(serviceName, version string) Logger {
 	otelLogger := otelslog.NewLogger(serviceName,
 		otelslog.WithVersion(version),
+		// this shows this file as the source of the log we need to show where these functions are called
 		otelslog.WithSource(true),
 	)
 

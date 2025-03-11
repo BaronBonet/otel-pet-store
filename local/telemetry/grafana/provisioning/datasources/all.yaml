@@ -1,7 +1,7 @@
 apiVersion: 1
 
 datasources:
-  - name: Tempo
+  - name: Traces
     type: tempo
     access: proxy
     orgId: 1
@@ -13,7 +13,7 @@ datasources:
     apiVersion: 1
     uid: tempo
 
-  - name: Loki
+  - name: Logs
     type: loki
     access: proxy
     orgId: 1
@@ -24,9 +24,12 @@ datasources:
     editable: false
     apiVersion: 1
     uid: loki
+    # TODO: it seems like this isn't being used
     jsonData:
       derivedFields:
         - datasourceUid: tempo
           matcherRegex: '"traceid":"([a-f0-9]+)"'
-          name: TraceID
-          url: "/trace/${__value.raw}"
+          matherType: label
+          name: Trace ID
+          urlDisplayLabel: "View Trace"
+          url: ${__value.raw}

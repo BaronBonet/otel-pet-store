@@ -8,9 +8,9 @@ datasources:
     url: http://tempo:3200
     basicAuth: false
     isDefault: true
-    # version: 1
+    version: 1
     editable: false
-    # apiVersion: 1
+    apiVersion: 1
     uid: tempo
     jsonData:
       httpMethod: GET
@@ -21,7 +21,7 @@ datasources:
         filterByTraceID: false
         filterBySpanID: false
         customQuery: true
-        query: '{exporter="OTLP"} | json | line_format "{{.body}}" | json | traceid="$${__span.traceId}" | spanid="$${__span.spanId}"'
+        query: '{exporter="OTLP"} | json | traceid="$${__span.traceId}" | spanid="$${__span.spanId}" | line_format "{{.body}}"'
       lokiSearch:
         datasourceUid: loki
 

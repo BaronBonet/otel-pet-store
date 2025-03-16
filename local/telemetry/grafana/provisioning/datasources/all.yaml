@@ -8,10 +8,22 @@ datasources:
     url: http://tempo:3200
     basicAuth: false
     isDefault: true
-    version: 1
+    # version: 1
     editable: false
-    apiVersion: 1
+    # apiVersion: 1
     uid: tempo
+    jsonData:
+      httpMethod: GET
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "+1h"
+        filterByTraceID: false
+        filterBySpanID: false
+        customQuery: true
+        query: '{exporter="OTLP"} | json | line_format "{{.body}}" | json | traceid="$${__span.traceId}" | spanid="$${__span.spanId}"'
+      lokiSearch:
+        datasourceUid: loki
 
   - name: Logs
     type: loki
@@ -24,12 +36,10 @@ datasources:
     editable: false
     apiVersion: 1
     uid: loki
-    # TODO: why is the traceid not appearing in TraceQL when i click on the "View Trace" button in loki?
     jsonData:
       derivedFields:
         - datasourceUid: tempo
           matcherRegex: '"traceid":"([a-f0-9]+)"'
-          # matcherType: "label"
           name: Trace ID
           urlDisplayLabel: "Trace"
           url: "$${__value.raw}"

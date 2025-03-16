@@ -6,3 +6,11 @@ starting to get traces to logs
 
 for confiring this in code
 <https://github.com/grafana/grafana/issues/64659>
+
+## Getting Started
+
+```bash
+cp .env_example .env
+```
+```
+```

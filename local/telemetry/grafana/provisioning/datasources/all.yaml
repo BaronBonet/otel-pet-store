@@ -43,3 +43,14 @@ datasources:
           name: Trace ID
           urlDisplayLabel: "Trace"
           url: "$${__value.raw}"
+
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    orgId: 1
+    url: http://prometheus:9090
+    basicAuth: false
+    isDefault: false
+    version: 1
+    editable: true
+    uid: prometheus

@@ -52,7 +52,7 @@ services:
     volumes:
       - "./local/telemetry/tempo.yaml:/etc/tempo.yaml"
 
-  # # Loki for log aggregation
+  # Loki for log aggregation
   loki:
     image: grafana/loki:latest
     command: ["-config.file=/etc/loki/local-config.yaml"]
@@ -61,6 +61,19 @@ services:
     volumes:
       - ./local/telemetry/loki.yaml:/etc/loki/local-config.yaml
       - loki_data:/loki
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: petstore_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./local/telemetry/prometheus.yaml:/etc/prometheus/prometheus.yaml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
+    depends_on:
+      - otel-collector
 
   # Grafana for visualization
   grafana:

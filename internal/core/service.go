@@ -7,15 +7,27 @@ import (
 
 	"github.com/BaronBonet/otel-pet-store/internal/pkg/logger"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type service struct {
-	repo   Repository
-	logger logger.Logger
+	repo        Repository
+	logger      logger.Logger
+	meter       metric.Meter
+	petsCreated metric.Int64Counter
 }
 
 func NewService(repo Repository, logger logger.Logger) Service {
-	return &service{repo: repo, logger: logger}
+	meter := otel.Meter("github.com/BaronBonet/otel-pet-store")
+	petsCreated, err := meter.Int64Counter(
+		"pets_created",
+		metric.WithDescription("Counts the number of pets created"),
+	)
+	if err != nil {
+		logger.Error(context.Background(), "Failed to create counter", "error", err)
+	}
+	return &service{repo: repo, logger: logger, meter: meter, petsCreated: petsCreated}
 }
 
 func (s *service) CreatePet(ctx context.Context, name string, petType PetType) (*Pet, error) {
@@ -32,6 +44,8 @@ func (s *service) CreatePet(ctx context.Context, name string, petType PetType) (
 	if err := s.repo.CreatePet(ctx, pet); err != nil {
 		return nil, fmt.Errorf("creating pet: %w", err)
 	}
+
+	s.petsCreated.Add(ctx, 1)
 
 	return pet, nil
 }

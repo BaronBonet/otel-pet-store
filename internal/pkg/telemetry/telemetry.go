@@ -7,12 +7,15 @@ import (
 	"os"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -178,48 +181,43 @@ func newTraceProvider(
 
 // newMeterProvider initializes a meter provider for metrics collection.
 // It uses a periodic reader to export metrics at regular intervals.
-// func newMeterProvider(
-// 	ctx context.Context,
-// 	res *resource.Resource,
-// 	config OtelConfig,
-// ) (*metric.MeterProvider, error) {
-// 	opts := []otlpmetrichttp.Option{
-// 		otlpmetrichttp.WithEndpoint(config.Exporter.endpoint),
-// 		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-// 	}
-//
-// 	if config.Exporter.apiKey != "" {
-// 		opts = append(opts, otlpmetrichttp.WithHeaders(map[string]string{
-// 			"api-key": config.Exporter.apiKey,
-// 		}))
-// 	}
-//
-// 	if config.Exporter.Exporter == ExporterOTLPLocal {
-// 		opts = append(opts, otlpmetrichttp.WithInsecure())
-// 	}
-//
-// 	metricExporter, err := otlpmetrichttp.New(ctx, opts...)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	meterProvider := metric.NewMeterProvider(
-// 		metric.WithReader(
-// 			metric.NewPeriodicReader(
-// 				metricExporter,
-// 				metric.WithInterval(10*time.Second),
-// 			),
-// 		),
-// 		metric.WithResource(res),
-// 	)
-//
-// 	// Start runtime instrumentation
-// 	if err := runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
-// 		return nil, fmt.Errorf("failed to start runtime instrumentation: %w", err)
-// 	}
-//
-// 	return meterProvider, nil
-// }
+func newMeterProvider(
+	ctx context.Context,
+	res *resource.Resource,
+	config OtelConfig,
+) (*metric.MeterProvider, error) {
+	opts := []otlpmetrichttp.Option{
+		otlpmetrichttp.WithEndpoint(config.Exporter.endpoint),
+		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+	}
+
+	// TODO: remove this when done, it's all insecure
+	if config.Exporter.Exporter == ExporterOTLPLocal {
+		opts = append(opts, otlpmetrichttp.WithInsecure())
+	}
+
+	metricExporter, err := otlpmetrichttp.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithReader(
+			metric.NewPeriodicReader(
+				metricExporter,
+				metric.WithInterval(10*time.Second),
+			),
+		),
+		metric.WithResource(res),
+	)
+
+	// Start runtime instrumentation
+	if err := runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
+		return nil, fmt.Errorf("failed to start runtime instrumentation: %w", err)
+	}
+
+	return meterProvider, nil
+}
 
 func newLoggerProvider(
 	ctx context.Context,

@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
@@ -110,13 +110,13 @@ func SetupOTelSDK(
 	otel.SetTracerProvider(tracerProvider)
 
 	// Initialize the meter provider for metrics with the configured exporter and resource.
-	// meterProvider, err := newMeterProvider(ctx, res, config)
-	// if err != nil {
-	// 	handleErr(err)
-	// 	return
-	// }
-	// shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	// otel.SetMeterProvider(meterProvider)
+	meterProvider, err := newMeterProvider(ctx, res, config)
+	if err != nil {
+		handleErr(err)
+		return
+	}
+	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+	otel.SetMeterProvider(meterProvider)
 
 	// Initialize the logger provider for logs with the configured exporter and resource.
 	loggerProvider, err := newLoggerProvider(ctx, res, config)
@@ -186,17 +186,12 @@ func newMeterProvider(
 	res *resource.Resource,
 	config OtelConfig,
 ) (*metric.MeterProvider, error) {
-	opts := []otlpmetrichttp.Option{
-		otlpmetrichttp.WithEndpoint(config.Exporter.endpoint),
-		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+	opts := []otlpmetricgrpc.Option{
+		otlpmetricgrpc.WithEndpoint(config.Exporter.endpoint),
+		otlpmetricgrpc.WithInsecure(),
 	}
 
-	// TODO: remove this when done, it's all insecure
-	if config.Exporter.Exporter == ExporterOTLPLocal {
-		opts = append(opts, otlpmetrichttp.WithInsecure())
-	}
-
-	metricExporter, err := otlpmetrichttp.New(ctx, opts...)
+	metricExporter, err := otlpmetricgrpc.New(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +206,6 @@ func newMeterProvider(
 		metric.WithResource(res),
 	)
 
-	// Start runtime instrumentation
 	if err := runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
 		return nil, fmt.Errorf("failed to start runtime instrumentation: %w", err)
 	}

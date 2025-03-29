@@ -46,6 +46,7 @@ type OtelConfig struct {
 
 // NewOtelConfig creates a new configuration with the provided options.
 func NewOtelConfig(config OtelConfig) (*OtelConfig, error) {
+	// TODO: make this come from the main.go file
 	config.Exporter.endpoint = "localhost:4317"
 
 	hostname, err := os.Hostname()
@@ -188,7 +189,10 @@ func newMeterProvider(
 ) (*metric.MeterProvider, error) {
 	opts := []otlpmetricgrpc.Option{
 		otlpmetricgrpc.WithEndpoint(config.Exporter.endpoint),
-		otlpmetricgrpc.WithInsecure(),
+	}
+
+	if config.Exporter.Exporter == ExporterOTLPLocal {
+		opts = append(opts, otlpmetricgrpc.WithInsecure())
 	}
 
 	metricExporter, err := otlpmetricgrpc.New(ctx, opts...)

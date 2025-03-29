@@ -32,8 +32,7 @@ services:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: petstore_otel_collector
     ports:
-      - "4318:4318" # HTTP
-      - "4317:4317" # GRPC
+      - "4317:4317"
     volumes:
       - ./local/telemetry/otel-collector-config.yaml:/etc/otel-collector-config.yaml
     command: ["--config", "/etc/otel-collector-config.yaml"]
@@ -46,8 +45,7 @@ services:
     image: grafana/tempo:latest
     container_name: petstore_tempo_traces
     ports:
-      - "3200:3200" # tempo
-      - "14317:4317" # otlp grpc
+      - "3200:3200"
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
       - "./local/telemetry/tempo.yaml:/etc/tempo.yaml"
@@ -56,18 +54,13 @@ services:
   loki:
     image: grafana/loki:latest
     command: ["-config.file=/etc/loki/local-config.yaml"]
-    ports:
-      - "3100:3100"
     volumes:
       - ./local/telemetry/loki.yaml:/etc/loki/local-config.yaml
-      - loki_data:/loki
 
   # Prometheus for metrics
   prometheus:
     image: prom/prometheus:latest
     container_name: petstore_prometheus
-    ports:
-      - "9090:9090"
     volumes:
       - ./local/telemetry/prometheus.yaml:/etc/prometheus/prometheus.yaml
     command:
@@ -94,6 +87,4 @@ services:
       - tempo
 
 volumes:
-  tempo_data:
-  loki_data:
   postgres_data:

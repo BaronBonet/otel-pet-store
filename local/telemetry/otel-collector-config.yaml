@@ -2,30 +2,35 @@ receivers:
   otlp:
     protocols:
       grpc:
+        # The OTLP receiver is configured to listen for incoming telemetry data
+        # over gRPC on port 4317.
         endpoint: 0.0.0.0:4317
-      # TODO: i don't think we need this
-      http:
-        endpoint: 0.0.0.0:4318
-
 processors:
   batch:
+    # The batch processor is used to group telemetry data into batches before
+    # exporting it. This can help improve performance and reduce the number
+    # of requests sent to the backend.
     timeout: 1s
     send_batch_size: 1024
-
 exporters:
   loki:
+    # The Loki exporter is configured to send log data to a Loki instance.
+    # The endpoint specifies the URL where Loki is running.
     endpoint: http://loki:3100/loki/api/v1/push
     tls:
+      # NOTE: only use insecure for local development
       insecure: true
-
   otlp:
+    # The OTLP exporter is used to send trace data to Tempo using the
+    # OpenTelemetry Protocol.
     endpoint: tempo:4317
     tls:
       insecure: true
-
   prometheus:
+    # The Prometheus exporter exposes metrics in a format that can be
+    # scraped by Prometheus. The endpoint specifies the address where
+    # the metrics will be available.
     endpoint: 0.0.0.0:9091
-
 service:
   pipelines:
     traces:
